@@ -21,10 +21,12 @@ namespace Tweetbook.Services
         {
             return await _dbContext.Posts.ToListAsync();
         }
+
         public async Task<Post> GetPostByIdAsync(Guid id)
         {
             return await _dbContext.Posts.SingleOrDefaultAsync(x => x.Id == id);
         }
+
         public async Task<bool> CreatePostAsync(Post post)
         {
             await _dbContext.AddAsync(post);
@@ -38,6 +40,7 @@ namespace Tweetbook.Services
             var result = await _dbContext.SaveChangesAsync();
             return result > 0;
         }
+
         public async Task<bool> DeleteAsync(Guid postId)
         {
             var post = await GetPostByIdAsync(postId);
@@ -46,6 +49,22 @@ namespace Tweetbook.Services
             _dbContext.Remove(post);
             var result = await _dbContext.SaveChangesAsync();
             return result > 0;
+        }
+
+        public async Task<bool> UserOwnsPostAsync(Guid postId, string userId)
+        {
+            var post = await _dbContext.Posts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == postId);
+            if (post == null)
+            {
+                return false;
+            }
+
+            if (post.UserId != userId)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

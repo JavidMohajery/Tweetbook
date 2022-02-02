@@ -88,7 +88,8 @@ namespace Tweetbook.Services
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, newUser.Email),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(JwtRegisteredClaimNames.Email, newUser.Email)
+                    new Claim(JwtRegisteredClaimNames.Email, newUser.Email),
+                    new Claim("UserId", newUser.Id)
                 }),
                 Expires = DateTime.Now.AddHours(2),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
