@@ -40,7 +40,7 @@ namespace Tweetbook.Controllers.V1
         }
 
         [HttpPost(ApiRoutes.Posts.Create)]
-        public async Task<IActionResult> Create(CreatePostRequest postRequest)
+        public async Task<IActionResult> Create([FromBody]CreatePostRequest postRequest)
         {
             var userId = HttpContext.GetUserId();
             var post = new Post { Name = postRequest.Name, UserId = userId};
