@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Swashbuckle.AspNetCore.Swagger;
 using System;
 using System.Collections.Generic;
@@ -34,16 +35,8 @@ namespace Tweetbook
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            var swaggerOptions = new Tweetbook.Options.SwaggerOptions();
-            Configuration.GetSection(nameof(SwaggerOptions)).Bind(swaggerOptions);
-
-            app.UseSwagger(option => option.RouteTemplate = swaggerOptions.JsonRoute);
-            app.UseSwaggerUI(option => option.SwaggerEndpoint(swaggerOptions.UIEndpoint, swaggerOptions.Description));
-
-
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -58,13 +51,13 @@ namespace Tweetbook
             app.UseStaticFiles();
 
             app.UseAuthentication();
+            var swaggerOptions = new Tweetbook.Options.SwaggerOptions();
+            Configuration.GetSection(nameof(SwaggerOptions)).Bind(swaggerOptions);
 
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
-            });
+            app.UseSwagger(option => option.RouteTemplate = swaggerOptions.JsonRoute);
+            app.UseSwaggerUI(option => option.SwaggerEndpoint(swaggerOptions.UIEndpoint, swaggerOptions.Description));
+
+            app.UseMvc();
         }
     }
 }

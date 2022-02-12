@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
 using System.Text;
 using Tweetbook.Options;
@@ -20,7 +20,7 @@ namespace Tweetbook.Installers
             services.AddSingleton(jwtSettings);
 
             services.AddScoped<IIdentityService, IdentityService>();
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddMvc(options => { options.EnableEndpointRouting = false; }).SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
             var tokenValidationParameters = new TokenValidationParameters
             {
@@ -47,19 +47,29 @@ namespace Tweetbook.Installers
 
             services.AddSwaggerGen(x =>
             {
-                x.SwaggerDoc("v1", new Info {Title = "Tweetbook API", Version = "v1"});
+                x.SwaggerDoc("v1", new OpenApiInfo { Title = "Tweetbook API", Version = "v1" });
                 var security = new Dictionary<string, IEnumerable<string>>()
                 {
                     {"Bearer", new string[0]}
                 };
-                x.AddSecurityDefinition("Bearer", new ApiKeyScheme
+                x.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Description = "Jwt Aithorzationo header using bearer scheme",
+                    Description = "Jwt Authorization header using bearer scheme",
                     Name = "Authorization",
-                    In = "header",
-                    Type = "apiKey"
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey
                 });
-                x.AddSecurityRequirement(security);
+                x.AddSecurityRequirement(new OpenApiSecurityRequirement 
+                {
+                    {new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Id = "Bearer",
+                            Type = ReferenceType.SecurityScheme
+                        }
+                    }, new List<string>{} }
+                });
             });
         }
     }

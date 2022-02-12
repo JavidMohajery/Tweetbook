@@ -14,9 +14,10 @@ using Xunit;
 
 namespace Tweetbook.IntegrationTest
 {
-    public class IntegrationTest
+    public class IntegrationTest : IDisposable
     {
         protected readonly HttpClient TestClient;
+        private readonly IServiceProvider _serviceProvider;
         protected IntegrationTest()
         {
             var webFactory = new WebApplicationFactory<Startup>()
@@ -28,6 +29,7 @@ namespace Tweetbook.IntegrationTest
                         services.AddDbContext<DataContext>(option => option.UseInMemoryDatabase("testDb"));
                     });
                 });
+            _serviceProvider = webFactory.Services;
             TestClient = webFactory.CreateClient();
         }
 
@@ -48,6 +50,13 @@ namespace Tweetbook.IntegrationTest
         {
             var response = await TestClient.PostAsJsonAsync(ApiRoutes.Posts.Create, createPostRequest);
             return await response.Content.ReadAsAsync<CreatePostResponse>();
+        }
+
+        public void Dispose()
+        {
+            using var serviceScope = _serviceProvider.CreateScope();
+            var context = serviceScope.ServiceProvider.GetService<DataContext>();
+            context.Database.EnsureDeleted();
         }
     }
 }
