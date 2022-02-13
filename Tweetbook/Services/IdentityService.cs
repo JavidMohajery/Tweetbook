@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -38,16 +39,17 @@ namespace Tweetbook.Services
                 return new AuthenticationResult()
                 {
                     Success = false,
-                    Errors = new[] {"User with this email is already exists."}
+                    Errors = new[] { "User with this email is already exists." }
                 };
             }
-
+            var newUserId = Guid.NewGuid();
             var newUser = new IdentityUser()
             {
+                Id = newUserId.ToString(),
                 Email = email,
                 UserName = email
             };
-
+            
             var createdUser = await _userManager.CreateAsync(newUser, password);
             if (!createdUser.Succeeded)
             {
@@ -56,7 +58,7 @@ namespace Tweetbook.Services
                     Errors = createdUser.Errors.Select(x => x.Description)
                 };
             }
-
+            await _userManager.AddClaimAsync(newUser, new Claim("tags.view", "true"));
             return await GenerateAuthenticationResultForUser(newUser);
         }
 
@@ -69,7 +71,7 @@ namespace Tweetbook.Services
                 return new AuthenticationResult()
                 {
                     Success = false,
-                    Errors = new[] {"There is no such a user with this email."}
+                    Errors = new[] { "There is no such a user with this email." }
                 };
             }
 
@@ -79,7 +81,7 @@ namespace Tweetbook.Services
                 return new AuthenticationResult()
                 {
                     Success = false,
-                    Errors = new[] {"email/password combination error."}
+                    Errors = new[] { "email/password combination error." }
                 };
             }
 
@@ -90,40 +92,40 @@ namespace Tweetbook.Services
         {
             var principals = GetPrincipalFromToken(token);
             if (principals == null)
-                return new AuthenticationResult() {Errors = new[] {"Invalid Jwt token!"}};
+                return new AuthenticationResult() { Errors = new[] { "Invalid Jwt token!" } };
 
             var expiryDateUnix = long.Parse(principals.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Exp).Value);
             var expireDateDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 .AddSeconds(expiryDateUnix);
 
             if (expireDateDateTime > DateTime.UtcNow)
-                return new AuthenticationResult() {Errors = new[] {"Token has not expired yet!"}};
-            
+                return new AuthenticationResult() { Errors = new[] { "Token has not expired yet!" } };
+
             var jti = principals.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
-            var storedRefreshToken =  _context.RefreshTokens.SingleOrDefault(x => x.Token == refreshToken);
+            var storedRefreshToken = _context.RefreshTokens.SingleOrDefault(x => x.Token == refreshToken);
             if (storedRefreshToken == null)
             {
-                return new AuthenticationResult() {Errors = new[] {"This refresh token doesn't exist!"}};
+                return new AuthenticationResult() { Errors = new[] { "This refresh token doesn't exist!" } };
             }
 
             if (DateTime.UtcNow > storedRefreshToken.ExpiryDate)
             {
-                return new AuthenticationResult() {Errors = new[] {"This refresh token has been expired!"}};
+                return new AuthenticationResult() { Errors = new[] { "This refresh token has been expired!" } };
             }
 
             if (storedRefreshToken.Invalidated)
             {
-                return new AuthenticationResult() {Errors = new[] {"This refresh token has been invalidated!"}};
+                return new AuthenticationResult() { Errors = new[] { "This refresh token has been invalidated!" } };
             }
 
             if (storedRefreshToken.Used)
             {
-                return new AuthenticationResult() {Errors = new[] {"This refresh token has been used!"}};
+                return new AuthenticationResult() { Errors = new[] { "This refresh token has been used!" } };
             }
 
             if (storedRefreshToken.JwtId != jti)
             {
-                return new AuthenticationResult() {Errors = new[] {"This refresh token does not match this jwt!"}};
+                return new AuthenticationResult() { Errors = new[] { "This refresh token does not match this jwt!" } };
             }
 
             storedRefreshToken.Used = true;
@@ -159,15 +161,18 @@ namespace Tweetbook.Services
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
-            var tokenDescriptor = new SecurityTokenDescriptor()
-            {
-                Subject = new ClaimsIdentity(new[]
+            var claims = new List<Claim>
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, user.Email),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.Email, user.Email),
                     new Claim("UserId", user.Id)
-                }),
+                };
+            var userClaims = await _userManager.GetClaimsAsync(user);
+            claims.AddRange(userClaims);
+            var tokenDescriptor = new SecurityTokenDescriptor()
+            {
+                Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.Now.Add(_jwtSettings.TokenLifetime),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
                     SecurityAlgorithms.HmacSha256Signature)

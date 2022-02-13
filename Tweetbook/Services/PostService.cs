@@ -66,5 +66,10 @@ namespace Tweetbook.Services
 
             return true;
         }
+
+        public async Task<IEnumerable<Tag>> GetAllTagsAsync()
+        {
+            return await _dbContext.Tags.ToListAsync();
+        }
     }
 }

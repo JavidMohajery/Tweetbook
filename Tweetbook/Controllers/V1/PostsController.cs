@@ -9,10 +9,11 @@ using Tweetbook.Contracts.V1.Responses;
 using Tweetbook.Domain;
 using Tweetbook.Extensions;
 using Tweetbook.Services;
+using System.Linq;
 
 namespace Tweetbook.Controllers.V1
 {
-    [Authorize( AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class PostsController : Controller
     {
         private readonly IPostService _postService;
@@ -40,11 +41,11 @@ namespace Tweetbook.Controllers.V1
         }
 
         [HttpPost(ApiRoutes.Posts.Create)]
-        public async Task<IActionResult> Create([FromBody]CreatePostRequest postRequest)
+        public async Task<IActionResult> Create([FromBody] CreatePostRequest postRequest)
         {
             var userId = HttpContext.GetUserId();
-            var post = new Post { Name = postRequest.Name, UserId = userId};
-            
+            var post = new Post { Name = postRequest.Name, UserId = userId, Tags = postRequest.Tags?.Select(x => new Tag { Name = x }).ToList() };
+
             await _postService.CreatePostAsync(post);
             var locationUrl = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host
                  + "/" + ApiRoutes.Posts.Get.Replace("{postId}", post.Id.ToString());
@@ -59,7 +60,7 @@ namespace Tweetbook.Controllers.V1
             var userOwnsPost = await _postService.UserOwnsPostAsync(postId, HttpContext.GetUserId());
             if (!userOwnsPost)
             {
-                return BadRequest(new {error = "You do not own this post."});
+                return BadRequest(new { error = "You do not own this post." });
             }
 
             var post = await _postService.GetPostByIdAsync(postId);
@@ -77,7 +78,7 @@ namespace Tweetbook.Controllers.V1
             var userOwnsPost = await _postService.UserOwnsPostAsync(postId, HttpContext.GetUserId());
             if (!userOwnsPost)
             {
-                return BadRequest(new {error = "You do not own this post."});
+                return BadRequest(new { error = "You do not own this post." });
             }
             bool deleted = await _postService.DeleteAsync(postId);
             if (deleted) return NoContent();
