@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Tweetbook.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace Tweetbook
 {
@@ -15,7 +16,20 @@ namespace Tweetbook
             using (var scope = host.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+                var roleManage = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
                 await dbContext.Database.MigrateAsync();
+                if (!await roleManage.RoleExistsAsync("Admin"))
+                {
+                    var adminRole = new IdentityRole("Admin");
+                    await roleManage.CreateAsync(adminRole);
+                }
+                if (!await roleManage.RoleExistsAsync("Poster"))
+                {
+                    var posterRole = new IdentityRole("Poster");
+                    await roleManage.CreateAsync(posterRole);
+                }
+
+               
             }
             await host.RunAsync();
         }
